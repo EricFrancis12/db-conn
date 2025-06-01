@@ -98,11 +98,26 @@ func connect(
 	}
 }
 
+const defaultFilePath string = "targets.txt"
+
+var defaultFileContent string
+
+func init() {
+	var once sync.Once
+	once.Do(func() {
+		b, err := os.ReadFile(defaultFilePath)
+		if err == nil {
+			defaultFileContent = string(b)
+		}
+	})
+}
+
 func main() {
 	var (
-		filePath    = flag.String("f", "targets.txt", "Path to targets file")
+		filePath    = flag.String("f", defaultFilePath, "Path to targets file. Each target should be on a new line")
 		driverName  = flag.String("d", defaultDriverName, "SQL driver name")
 		connTimeout = flag.Duration("t", defaultConnTimeout, "DB connection timeout")
+		cleanRead   = flag.Bool("clean-read", false, "If true, always read the targets file from disk, ignoring any cached/default content")
 	)
 	flag.Parse()
 
@@ -115,16 +130,22 @@ func main() {
 		log.Fatalf("'%s' needs to be a path to a file (found dir)", *filePath)
 	}
 
-	b, err := os.ReadFile(*filePath)
-	if err != nil {
-		log.Fatalf("error reading file '%s': %s", *filePath, err.Error())
+	var content string
+	if !*cleanRead && *filePath == defaultFilePath {
+		content = defaultFileContent
+	} else {
+		b, err := os.ReadFile(*filePath)
+		if err != nil {
+			log.Fatalf("error reading file '%s': %s", *filePath, err.Error())
+		}
+		content = string(b)
 	}
 
 	success := run(
 		&Config{
 			Ctx:         context.Background(),
 			Logger:      logger{},
-			ConnStrs:    strings.Split(string(b), "\n"),
+			ConnStrs:    strings.Split(content, "\n"),
 			DriverName:  *driverName,
 			ConnTimeout: *connTimeout,
 			Connect:     connect,
