@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 )
@@ -11,6 +12,12 @@ func TestRun(t *testing.T) {
 		name          string
 		shouldSucceed bool
 		config        Config
+	}
+
+	var makeReadFileFunc = func(connStrs []string) func(string) ([]byte, error) {
+		return func(s string) ([]byte, error) {
+			return []byte(strings.Join(connStrs, "\n")), nil
+		}
 	}
 
 	var mockConnect ConnectFunc = func(
@@ -27,7 +34,8 @@ func TestRun(t *testing.T) {
 			name:          "Mock connect with no connection strings",
 			shouldSucceed: false,
 			config: Config{
-				ConnStrs: []string{},
+				Logger:   logger{},
+				ReadFile: makeReadFileFunc([]string{}),
 				Connect:  mockConnect,
 			},
 		},
@@ -35,20 +43,21 @@ func TestRun(t *testing.T) {
 			name:          "Mock connect with connection strings",
 			shouldSucceed: true,
 			config: Config{
-				ConnStrs: []string{"my connection string"},
+				Logger:   logger{},
+				ReadFile: makeReadFileFunc([]string{"my connection string"}),
 				Connect:  mockConnect,
 			},
 		},
 	}
 
 	for _, test := range tests {
-		success := run(&test.config)
+		err := run(&test.config)
 
-		if test.shouldSucceed && !success {
-			t.Logf("test '%s': expected success, but got failure", test.name)
+		if test.shouldSucceed && err != nil {
+			t.Logf("test '%s': expected success, but got: %v", test.name, err)
 			t.Fail()
-		} else if !test.shouldSucceed && success {
-			t.Logf("test '%s': expected failure, but got success", test.name)
+		} else if !test.shouldSucceed && err == nil {
+			t.Logf("test '%s': expected failure, but got nil", test.name)
 			t.Fail()
 		}
 	}

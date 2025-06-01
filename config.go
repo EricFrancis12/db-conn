@@ -4,23 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
-	"time"
-)
-
-const (
-	defaultDriverName  string        = "postgres"
-	defaultConnTimeout time.Duration = time.Second * 5
-	minConnTimeout     time.Duration = time.Second / 10
 )
 
 type Config struct {
-	Ctx         context.Context
-	Logger      Logger
-	ConnStrs    []string
-	DriverName  string
-	ConnTimeout time.Duration
-	Connect     ConnectFunc
+	Ctx      context.Context
+	Logger   Logger
+	Args     []string
+	Connect  ConnectFunc
+	ReadFile func(string) ([]byte, error)
 }
 
 func (c Config) Valid() error {
@@ -34,26 +25,16 @@ func (c Config) Valid() error {
 		problems["Logger"] = "Logger is nil"
 	}
 
-	if c.ConnStrs == nil {
-		problems["ConnStrs"] = "ConnStrs is nil"
-	} else if len(c.ConnStrs) == 0 {
-		problems["ConnStrs"] = "ConnStrs has length of 0"
-	}
-
-	if c.DriverName == "" {
-		problems["DriverName"] = "DriverName is missing"
-	}
-
-	if c.ConnTimeout < minConnTimeout {
-		problems["ConnTimeout"] = fmt.Sprintf(
-			"ConnTimeout '%s' is less than the minimum '%s'",
-			c.ConnTimeout.String(),
-			minConnTimeout.String(),
-		)
+	if len(c.Args) == 0 {
+		problems["Args"] = "Args should be at least length 1 (got length 0)"
 	}
 
 	if c.Connect == nil {
 		problems["Connect"] = "Connect is nil"
+	}
+
+	if c.ReadFile == nil {
+		problems["ReadFile"] = "ReadFile is nil"
 	}
 
 	if len(problems) > 0 {
@@ -76,25 +57,16 @@ func (c *Config) Init() error {
 		c.Logger = mockLogger{}
 	}
 
-	connStrs := []string{}
-	for _, s := range c.ConnStrs {
-		s = strings.TrimSpace(s)
-		if s != "" {
-			connStrs = append(connStrs, s)
-		}
-	}
-	c.ConnStrs = connStrs
-
-	if c.DriverName == "" {
-		c.DriverName = defaultDriverName
-	}
-
-	if c.ConnTimeout < minConnTimeout {
-		c.ConnTimeout = minConnTimeout
+	if len(c.Args) == 0 {
+		c.Args = []string{""}
 	}
 
 	if c.Connect == nil {
 		c.Connect = connect
+	}
+
+	if c.ReadFile == nil {
+		c.ReadFile = readFile
 	}
 
 	return c.Valid()

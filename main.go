@@ -12,23 +12,64 @@ import (
 	"time"
 )
 
-func run(c *Config) bool {
+const (
+	defaultFilePath    string        = "targets.txt"
+	defaultDriverName  string        = "postgres"
+	defaultConnTimeout time.Duration = time.Second * 5
+	minConnTimeout     time.Duration = time.Second / 10
+)
+
+func run(c *Config) error {
 	if err := c.Init(); err != nil {
-		c.Logger.Printf("%w\n", err)
-		return false
+		return err
 	}
 
-	connCount := len(c.ConnStrs)
+	commandLine := flag.NewFlagSet(c.Args[0], flag.ExitOnError)
+	var (
+		filePath       = commandLine.String("f", defaultFilePath, "Path to targets file. Each target should be on a new line")
+		driverName     = commandLine.String("d", defaultDriverName, "SQL driver name")
+		connTimeout    = commandLine.Duration("t", defaultConnTimeout, "DB connection timeout")
+		listConnErrors = commandLine.Bool("errors", true, "Prints connection errors to terminal")
+	)
+	commandLine.Parse(c.Args[1:])
+
+	b, err := c.ReadFile(*filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	lines := strings.Split(string(b), "\n")
+
+	connStrs := []string{}
+	for _, line := range lines {
+		s := strings.TrimSpace(line)
+		if s != "" {
+			connStrs = append(connStrs, s)
+		}
+	}
+
+	connCount := len(connStrs)
+	if connCount == 0 {
+		return fmt.Errorf("file '%s' has no valid connection strings", *filePath)
+	}
+
+	if *connTimeout < minConnTimeout {
+		return fmt.Errorf(
+			"ConnTimeout '%s' is less than the minimum '%s'",
+			connTimeout.String(),
+			minConnTimeout.String(),
+		)
+	}
+
 	errChan := make(chan error, connCount)
 	var wg sync.WaitGroup
 
 	c.Logger.Printf("Starting (%d) connection(s)\n", connCount)
 	now := time.Now()
 
-	for _, connStr := range c.ConnStrs {
+	for _, connStr := range connStrs {
 		wg.Add(1)
 		go func(cs string) {
-			err := connect(c.Ctx, c.DriverName, cs, c.ConnTimeout)
+			err := c.Connect(c.Ctx, *driverName, cs, *connTimeout)
 			if err != nil {
 				errChan <- fmt.Errorf("error connecting to '%s': %v", connStr, err)
 			}
@@ -41,26 +82,37 @@ func run(c *Config) bool {
 	c.Logger.Printf("Finished (%d) connection(s) in '%s'\n", connCount, took.String())
 	close(errChan)
 
-	if len(errChan) > 0 {
+	// len() measures unread elements in a channel,
+	// so we must take the len before ranging over
+	errorCount := len(errChan)
+
+	if *listConnErrors && errorCount > 0 {
 		c.Logger.Println("--- START ERRORS ---")
 		for err := range errChan {
-			c.Logger.Printf("%w", err)
+			c.Logger.Printf("%v", err)
 		}
 		c.Logger.Println("---  END ERRORS  ---")
 	}
 
-	errorCount := len(errChan)
 	successCount := connCount - errorCount
 	successRate := float64(successCount) / float64(connCount) * 100
 
 	c.Logger.Println("--- START RESULTS ---")
-	c.Logger.Printf("Sent %d connections in %s\n", connCount, took.String())
+	c.Logger.Printf("Sent %d connection(s) in %s\n", connCount, took.String())
 	c.Logger.Printf("%d/%d connections were successful\n", successCount, connCount)
-	c.Logger.Printf("%d/%d connections failed\n", errorCount, connCount)
 	c.Logger.Printf("Success Rate: %.2f%%\n", successRate)
 	c.Logger.Println("---  END RESULTS  ---")
 
-	return errorCount == 0
+	if errorCount > 0 {
+		return fmt.Errorf(
+			"%d/%d connection attempt(s) succeeded (%.2f%% success rate)",
+			successCount,
+			connCount,
+			successRate,
+		)
+	}
+
+	return nil
 }
 
 type ConnectFunc func(
@@ -98,42 +150,35 @@ func connect(
 	}
 }
 
-const defaultFilePath string = "targets.txt"
+func readFile(filePath string) ([]byte, error) {
+	stat, err := os.Stat(filePath)
+	if os.IsNotExist(err) {
+		return nil, fmt.Errorf("file '%s' not found", filePath)
+	} else if err != nil {
+		return nil, fmt.Errorf("error reading file '%s': %v", filePath, err)
+	} else if stat.IsDir() {
+		return nil, fmt.Errorf("'%s' needs to be a path to a file (found dir)", filePath)
+	}
+
+	b, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading file '%s': %v", filePath, err)
+	}
+
+	return b, nil
+}
 
 func main() {
-	var (
-		filePath    = flag.String("f", defaultFilePath, "Path to targets file. Each target should be on a new line")
-		driverName  = flag.String("d", defaultDriverName, "SQL driver name")
-		connTimeout = flag.Duration("t", defaultConnTimeout, "DB connection timeout")
-	)
-	flag.Parse()
-
-	stat, err := os.Stat(*filePath)
-	if os.IsNotExist(err) {
-		log.Fatalf("file '%s' not found", *filePath)
-	} else if err != nil {
-		log.Fatalf("error reading file '%s': %s", *filePath, err.Error())
-	} else if stat.IsDir() {
-		log.Fatalf("'%s' needs to be a path to a file (found dir)", *filePath)
-	}
-
-	b, err := os.ReadFile(*filePath)
-	if err != nil {
-		log.Fatalf("error reading file '%s': %s", *filePath, err.Error())
-	}
-
-	success := run(
+	err := run(
 		&Config{
-			Ctx:         context.Background(),
-			Logger:      logger{},
-			ConnStrs:    strings.Split(string(b), "\n"),
-			DriverName:  *driverName,
-			ConnTimeout: *connTimeout,
-			Connect:     connect,
+			Ctx:      context.Background(),
+			Logger:   logger{},
+			Args:     os.Args,
+			Connect:  connect,
+			ReadFile: readFile,
 		},
 	)
-	if !success {
-		os.Exit(1)
+	if err != nil {
+		log.Fatal(err)
 	}
-	os.Exit(0)
 }
