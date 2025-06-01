@@ -1,0 +1,10 @@
+# bin
+/bin
+/application
+/bootstrap
+**/*db-conn
+**/*.exe
+**/*.msi
+
+# targets
+**/targets.txt
