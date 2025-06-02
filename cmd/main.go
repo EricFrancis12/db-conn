@@ -10,7 +10,7 @@ import (
 
 func main() {
 	var (
-		filePath       = flag.String("f", pkg.DefaultFilePath, "Path to targets file. Each target should be on a new line")
+		filePath       = flag.String("f", pkg.DefaultFilePath, "Path to targets file. Each target should be on a new line.")
 		driverName     = flag.String("d", pkg.DefaultDriverName, "SQL driver name")
 		connTimeout    = flag.Duration("t", pkg.DefaultConnTimeout, "DB connection timeout")
 		listConnErrors = flag.Bool("errors", true, "Prints connection errors to terminal")
