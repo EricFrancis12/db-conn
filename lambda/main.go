@@ -21,7 +21,7 @@ func lambdaHandler(ctx context.Context, _ any) error {
 		logger.Printf("%v\n", err)
 	}
 
-	return nil
+	return err
 }
 
 func main() {

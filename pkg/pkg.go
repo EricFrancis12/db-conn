@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	_ "github.com/lib/pq"
 )
 
 const (
@@ -43,9 +45,13 @@ func Run(c *Config) error {
 	connStrs := []string{}
 	for _, line := range lines {
 		s := strings.TrimSpace(line)
-		if s != "" {
-			connStrs = append(connStrs, s)
+
+		// ignore empty lines & comments
+		if s == "" || s[0] == '#' {
+			continue
 		}
+
+		connStrs = append(connStrs, s)
 	}
 
 	connCount := len(connStrs)
