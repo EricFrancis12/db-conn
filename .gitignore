@@ -9,5 +9,9 @@
 # zip
 **/*.zip
 
+# codegen
+**/gen.go
+**/*_gen.go
+
 # targets
 **/targets.txt

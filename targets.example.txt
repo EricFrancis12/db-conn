@@ -1,0 +1,4 @@
+# You can leave comments in targets.txt with "#"
+
+# Example Connection String:
+user=tom password=12345678 host=example.com port=6543 dbname=postgres sslmode=disable

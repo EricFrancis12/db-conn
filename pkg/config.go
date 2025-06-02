@@ -66,7 +66,7 @@ func (c *Config) Init() error {
 	}
 
 	if c.ReadFile == nil {
-		c.ReadFile = readFile
+		c.ReadFile = ReadFile
 	}
 
 	return c.Valid()

@@ -36,22 +36,9 @@ func Run(c *Config) error {
 	)
 	commandLine.Parse(c.Args[1:])
 
-	b, err := c.ReadFile(*filePath)
+	connStrs, err := ReadToConnStrs(*filePath, ReadFile)
 	if err != nil {
 		log.Fatal(err)
-	}
-	lines := strings.Split(string(b), "\n")
-
-	connStrs := []string{}
-	for _, line := range lines {
-		s := strings.TrimSpace(line)
-
-		// ignore empty lines & comments
-		if s == "" || s[0] == '#' {
-			continue
-		}
-
-		connStrs = append(connStrs, s)
 	}
 
 	connCount := len(connStrs)
@@ -154,7 +141,7 @@ func connect(
 	}
 }
 
-func readFile(filePath string) ([]byte, error) {
+func ReadFile(filePath string) ([]byte, error) {
 	stat, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
 		return nil, fmt.Errorf("file '%s' not found", filePath)
@@ -170,4 +157,29 @@ func readFile(filePath string) ([]byte, error) {
 	}
 
 	return b, nil
+}
+
+func ReadToConnStrs(
+	filePath string,
+	readFile func(string) ([]byte, error),
+) ([]string, error) {
+	b, err := readFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+	lines := strings.Split(string(b), "\n")
+
+	connStrs := []string{}
+
+	for _, line := range lines {
+		s := strings.TrimSpace(line)
+
+		// ignore empty lines & comments
+		if s == "" || s[0] == '#' {
+			continue
+		}
+
+		connStrs = append(connStrs, s)
+	}
+	return connStrs, nil
 }

@@ -6,8 +6,12 @@ build:
 run: build
 	$(BIN_FILE_PATH) $(ARGS)
 
+codegen:
+	go generate ./...
+
 build_lambda:
-	env GOOS=linux go build -o bootstrap lambda/main.go
+	make codegen
+	env GOOS=linux go build -o bootstrap ./lambda
 	zip -r db-conn.zip bootstrap targets.txt
 	
 test:
