@@ -1,0 +1,31 @@
+name: MySQL Integration Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Run MySQL Integration Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Write targets.txt file
+        run: echo "root:12345678@tcp(127.0.0.1:3306)/mysql" > targets.txt
+
+      - name: Spin up MySQL via Docker
+        run: docker run --name mysql -e MYSQL_ROOT_PASSWORD=12345678 -p 3306:3306 -d mysql:8
+
+      - name: Run program
+        run: make run ARGS="-f targets.txt -d mysql -t 5s"
