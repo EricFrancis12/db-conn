@@ -1,4 +1,4 @@
-package main
+package pkg
 
 import (
 	"context"
@@ -51,7 +51,7 @@ func TestRun(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		err := run(&test.config)
+		err := Run(&test.config)
 
 		if test.shouldSucceed && err != nil {
 			t.Logf("test '%s': expected success, but got: %v", test.name, err)

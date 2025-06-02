@@ -1,10 +1,14 @@
-package main
+package pkg
 
 import "log"
 
 type Logger interface {
 	Printf(format string, v ...any)
 	Println(v ...any)
+}
+
+func NewLogger() Logger {
+	return &logger{}
 }
 
 type logger struct{}

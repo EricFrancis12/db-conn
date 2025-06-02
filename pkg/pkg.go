@@ -1,4 +1,4 @@
-package main
+package pkg
 
 import (
 	"context"
@@ -11,8 +11,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/aws/aws-lambda-go/lambda"
 )
 
 const (
@@ -22,7 +20,7 @@ const (
 	minConnTimeout     time.Duration = time.Second / 10
 )
 
-func run(c *Config) error {
+func Run(c *Config) error {
 	if err := c.Init(); err != nil {
 		return err
 	}
@@ -166,27 +164,4 @@ func readFile(filePath string) ([]byte, error) {
 	}
 
 	return b, nil
-}
-
-func main() {
-	var BuildMode string
-	if BuildMode == "lambda" {
-		lambda.Start(lambdaHandler)
-		return
-	}
-
-	log.Println("HELLO")
-
-	err := run(
-		&Config{
-			Ctx:      context.Background(),
-			Logger:   logger{},
-			Args:     os.Args,
-			Connect:  connect,
-			ReadFile: readFile,
-		},
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
 }
