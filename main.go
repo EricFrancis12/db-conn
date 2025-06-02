@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -10,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/aws/aws-lambda-go/lambda"
 )
 
 const (
@@ -79,7 +82,7 @@ func run(c *Config) error {
 
 	wg.Wait()
 	took := time.Since(now)
-	c.Logger.Printf("Finished (%d) connection(s) in '%s'\n", connCount, took.String())
+	c.Logger.Printf("Finished (%d) connection(s) in %s\n", connCount, took.String())
 	close(errChan)
 
 	// len() measures unread elements in a channel,
@@ -89,7 +92,7 @@ func run(c *Config) error {
 	if *listConnErrors && errorCount > 0 {
 		c.Logger.Println("--- START ERRORS ---")
 		for err := range errChan {
-			c.Logger.Printf("%v", err)
+			c.Logger.Printf("%v\n", err)
 		}
 		c.Logger.Println("---  END ERRORS  ---")
 	}
@@ -97,21 +100,18 @@ func run(c *Config) error {
 	successCount := connCount - errorCount
 	successRate := float64(successCount) / float64(connCount) * 100
 
-	c.Logger.Println("--- START RESULTS ---")
-	c.Logger.Printf("Sent %d connection(s) in %s\n", connCount, took.String())
-	c.Logger.Printf("%d/%d connections were successful\n", successCount, connCount)
-	c.Logger.Printf("Success Rate: %.2f%%\n", successRate)
-	c.Logger.Println("---  END RESULTS  ---")
+	msg := fmt.Sprintf(
+		"%d/%d connection attempt(s) succeeded (%.2f%% success rate)",
+		successCount,
+		connCount,
+		successRate,
+	)
 
 	if errorCount > 0 {
-		return fmt.Errorf(
-			"%d/%d connection attempt(s) succeeded (%.2f%% success rate)",
-			successCount,
-			connCount,
-			successRate,
-		)
+		return errors.New(msg)
 	}
 
+	c.Logger.Println(msg)
 	return nil
 }
 
@@ -169,6 +169,14 @@ func readFile(filePath string) ([]byte, error) {
 }
 
 func main() {
+	var BuildMode string
+	if BuildMode == "lambda" {
+		lambda.Start(lambdaHandler)
+		return
+	}
+
+	log.Println("HELLO")
+
 	err := run(
 		&Config{
 			Ctx:      context.Background(),

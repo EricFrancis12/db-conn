@@ -6,5 +6,8 @@
 **/*.exe
 **/*.msi
 
+# zip
+**/*.zip
+
 # targets
 **/targets.txt

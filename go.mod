@@ -1,3 +1,5 @@
 module db-conn
 
 go 1.22.6
+
+require github.com/aws/aws-lambda-go v1.48.0

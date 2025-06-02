@@ -5,6 +5,10 @@ build:
 
 run: build
 	$(BIN_FILE_PATH) $(ARGS)
+
+build_lambda:
+	env GOOS=linux go build -ldflags="-X main.BuildMode=lambda" -o bootstrap .
+	zip -r db-conn.zip bootstrap targets.txt
 	
 test:
 	go test -v ./...
