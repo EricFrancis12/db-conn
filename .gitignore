@@ -16,5 +16,8 @@ bin
 # targets
 **/targets.txt
 
+# db
+**/*.db
+
 # misc
 notes.txt
