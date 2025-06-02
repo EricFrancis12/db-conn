@@ -1,0 +1,31 @@
+name: Postgres Integration Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Run Postgres Integration Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Write targets.txt file
+        run: echo "user=postgres password=12345678 host=postgres port=5432 dbname=postgres sslmode=disable" > targets.txt
+
+      - name: Spin up Postgres via Docker
+        run: docker run --name postgres -e POSTGRES_PASSWORD=12345678 -p 5432:5432 -d postgres:17
+
+      - name: Run program
+        run: make run ARGS="-f targets.txt -d postgres -t 5s"
