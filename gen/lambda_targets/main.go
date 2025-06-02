@@ -5,17 +5,18 @@ import (
 	"go/format"
 	"log"
 	"os"
+	"path/filepath"
 
 	"db-conn/pkg"
 )
 
 func main() {
 	var (
-		filePath   = "../../targets.txt"
+		filePath   = filepath.Join("../../", pkg.DefaultFilePath)
 		outputPath = "../../lambda/gen.go"
 	)
 
-	connStrs, err := pkg.ReadToConnStrs(filePath, pkg.ReadFile)
+	connStrs, err := pkg.ReadToConnStrs(filePath)
 	if err != nil {
 		log.Fatal(err)
 	}

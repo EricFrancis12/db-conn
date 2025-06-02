@@ -2,7 +2,6 @@ package pkg
 
 import (
 	"context"
-	"strings"
 	"testing"
 	"time"
 )
@@ -12,12 +11,6 @@ func TestRun(t *testing.T) {
 		name          string
 		shouldSucceed bool
 		config        Config
-	}
-
-	var makeReadFileFunc = func(connStrs []string) func(string) ([]byte, error) {
-		return func(s string) ([]byte, error) {
-			return []byte(strings.Join(connStrs, "\n")), nil
-		}
 	}
 
 	var mockConnect ConnectFunc = func(
@@ -35,7 +28,7 @@ func TestRun(t *testing.T) {
 			shouldSucceed: false,
 			config: Config{
 				Logger:   logger{},
-				ReadFile: makeReadFileFunc([]string{}),
+				ConnStrs: []string{},
 				Connect:  mockConnect,
 			},
 		},
@@ -44,7 +37,7 @@ func TestRun(t *testing.T) {
 			shouldSucceed: true,
 			config: Config{
 				Logger:   logger{},
-				ReadFile: makeReadFileFunc([]string{"my connection string"}),
+				ConnStrs: []string{"my connection string"},
 				Connect:  mockConnect,
 			},
 		},

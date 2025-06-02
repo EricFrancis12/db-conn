@@ -13,8 +13,10 @@ func lambdaHandler(ctx context.Context, _ any) error {
 
 	err := pkg.Run(
 		&pkg.Config{
-			Ctx:    ctx,
-			Logger: logger,
+			Ctx:            ctx,
+			Logger:         logger,
+			ConnStrs:       targets[:],
+			ListConnErrors: true,
 		},
 	)
 	if err != nil {

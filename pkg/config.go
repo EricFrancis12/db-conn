@@ -4,14 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 )
 
 type Config struct {
-	Ctx      context.Context
-	Logger   Logger
-	Args     []string
-	Connect  ConnectFunc
-	ReadFile func(string) ([]byte, error)
+	Ctx            context.Context
+	Logger         Logger
+	ConnStrs       []string
+	DriverName     string
+	ConnTimeout    time.Duration
+	ListConnErrors bool
+	Connect        ConnectFunc
 }
 
 func (c Config) Valid() error {
@@ -25,16 +28,24 @@ func (c Config) Valid() error {
 		problems["Logger"] = "Logger is nil"
 	}
 
-	if len(c.Args) == 0 {
-		problems["Args"] = "Args should be at least length 1 (got length 0)"
+	if len(fmtLines(c.ConnStrs)) == 0 {
+		problems["ConnStrs"] = "no valid connection strings"
+	}
+
+	if c.DriverName == "" {
+		problems["DriverName"] = "DriverName is missing"
+	}
+
+	if c.ConnTimeout < MinConnTimeout {
+		problems["ConnTimeout"] = fmt.Sprintf(
+			"ConnTimeout '%s' is less than the minimum '%s'",
+			c.ConnTimeout.String(),
+			MinConnTimeout.String(),
+		)
 	}
 
 	if c.Connect == nil {
 		problems["Connect"] = "Connect is nil"
-	}
-
-	if c.ReadFile == nil {
-		problems["ReadFile"] = "ReadFile is nil"
 	}
 
 	if len(problems) > 0 {
@@ -57,16 +68,16 @@ func (c *Config) Init() error {
 		c.Logger = mockLogger{}
 	}
 
-	if len(c.Args) == 0 {
-		c.Args = []string{""}
+	if c.DriverName == "" {
+		c.DriverName = DefaultDriverName
+	}
+
+	if c.ConnTimeout == 0 {
+		c.ConnTimeout = DefaultConnTimeout
 	}
 
 	if c.Connect == nil {
 		c.Connect = connect
-	}
-
-	if c.ReadFile == nil {
-		c.ReadFile = ReadFile
 	}
 
 	return c.Valid()

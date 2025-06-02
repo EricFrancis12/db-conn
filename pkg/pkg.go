@@ -4,9 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"flag"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"sync"
@@ -16,10 +14,10 @@ import (
 )
 
 const (
-	defaultFilePath    string        = "targets.txt"
-	defaultDriverName  string        = "postgres"
-	defaultConnTimeout time.Duration = time.Second * 5
-	minConnTimeout     time.Duration = time.Second / 10
+	DefaultFilePath    string        = "targets.txt"
+	DefaultDriverName  string        = "postgres"
+	DefaultConnTimeout time.Duration = time.Second * 5
+	MinConnTimeout     time.Duration = time.Second / 10
 )
 
 func Run(c *Config) error {
@@ -27,43 +25,17 @@ func Run(c *Config) error {
 		return err
 	}
 
-	commandLine := flag.NewFlagSet(c.Args[0], flag.ExitOnError)
-	var (
-		filePath       = commandLine.String("f", defaultFilePath, "Path to targets file. Each target should be on a new line")
-		driverName     = commandLine.String("d", defaultDriverName, "SQL driver name")
-		connTimeout    = commandLine.Duration("t", defaultConnTimeout, "DB connection timeout")
-		listConnErrors = commandLine.Bool("errors", true, "Prints connection errors to terminal")
-	)
-	commandLine.Parse(c.Args[1:])
-
-	connStrs, err := ReadToConnStrs(*filePath, ReadFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	connCount := len(connStrs)
-	if connCount == 0 {
-		return fmt.Errorf("file '%s' has no valid connection strings", *filePath)
-	}
-
-	if *connTimeout < minConnTimeout {
-		return fmt.Errorf(
-			"ConnTimeout '%s' is less than the minimum '%s'",
-			connTimeout.String(),
-			minConnTimeout.String(),
-		)
-	}
-
+	connCount := len(c.ConnStrs)
 	errChan := make(chan error, connCount)
 	var wg sync.WaitGroup
 
 	c.Logger.Printf("Starting (%d) connection(s)\n", connCount)
 	now := time.Now()
 
-	for _, connStr := range connStrs {
+	for _, connStr := range c.ConnStrs {
 		wg.Add(1)
 		go func(cs string) {
-			err := c.Connect(c.Ctx, *driverName, cs, *connTimeout)
+			err := c.Connect(c.Ctx, c.DriverName, cs, c.ConnTimeout)
 			if err != nil {
 				errChan <- fmt.Errorf("error connecting to '%s': %v", connStr, err)
 			}
@@ -80,7 +52,7 @@ func Run(c *Config) error {
 	// so we must take the len before ranging over
 	errorCount := len(errChan)
 
-	if *listConnErrors && errorCount > 0 {
+	if c.ListConnErrors && errorCount > 0 {
 		c.Logger.Println("--- START ERRORS ---")
 		for err := range errChan {
 			c.Logger.Printf("%v\n", err)
@@ -141,7 +113,7 @@ func connect(
 	}
 }
 
-func ReadFile(filePath string) ([]byte, error) {
+func readFile(filePath string) ([]byte, error) {
 	stat, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
 		return nil, fmt.Errorf("file '%s' not found", filePath)
@@ -159,18 +131,8 @@ func ReadFile(filePath string) ([]byte, error) {
 	return b, nil
 }
 
-func ReadToConnStrs(
-	filePath string,
-	readFile func(string) ([]byte, error),
-) ([]string, error) {
-	b, err := readFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-	lines := strings.Split(string(b), "\n")
-
-	connStrs := []string{}
-
+func fmtLines(lines []string) []string {
+	result := []string{}
 	for _, line := range lines {
 		s := strings.TrimSpace(line)
 
@@ -179,7 +141,16 @@ func ReadToConnStrs(
 			continue
 		}
 
-		connStrs = append(connStrs, s)
+		result = append(result, s)
 	}
-	return connStrs, nil
+	return result
+}
+
+func ReadToConnStrs(filePath string) ([]string, error) {
+	b, err := readFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+	lines := strings.Split(string(b), "\n")
+	return fmtLines(lines), nil
 }
