@@ -1,13 +1,12 @@
 # DB Conn
 
-A Go utility to test database connection strings in parallel, with configurable driver, timeout, and input file.
+A Go utility to test database connection strings in parallel, with configurable driver and input file.
 
 ## Features
 
-- Reads a list of database connection strings from a file (one per line)
+- Reads a list of database connection strings from a file, one per line (see `targets.example.txt`).
 - Connects to each database in parallel using the specified driver
-- Configurable connection timeout
-- Reports success/failure for each connection and overall statistics
+- Reports success/failure for each connection and overall success rate
 
 ## Usage
 
