@@ -21,6 +21,12 @@ make run ARGS="[flags]"
 make run ARGS="-f my_targets.txt -d mysql -t 2s"
 ```
 
+## Supported Drivers (-d flag)
+
+- postgres (default)
+- mysql
+- sqlite3
+
 ## AWS Lambda Deployment
 
 You can deploy this utility as an AWS Lambda function. Follow these steps:
