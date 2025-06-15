@@ -7,6 +7,13 @@ import (
 	"time"
 )
 
+const (
+	DefaultFilePath    string        = "targets.txt"
+	DefaultDriverName  string        = "postgres" // TODO: make enums for driver names?
+	DefaultConnTimeout time.Duration = time.Second * 5
+	MinConnTimeout     time.Duration = time.Second / 10
+)
+
 type Config struct {
 	Ctx            context.Context
 	Logger         Logger
