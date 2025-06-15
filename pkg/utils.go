@@ -3,8 +3,26 @@ package pkg
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
+
+func FindAncestorDirWith(name string) (string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(dir, name)); err == nil {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", fmt.Errorf("project root not found")
+		}
+		dir = parent
+	}
+}
 
 func ReadToConnStrs(filePath string) ([]string, error) {
 	b, err := readFile(filePath)

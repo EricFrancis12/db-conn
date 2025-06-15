@@ -6,14 +6,20 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"db-conn/pkg"
 )
 
 func main() {
+	rootPath, err := pkg.FindAncestorDirWith("go.mod")
+	if err != nil {
+		log.Fatalf("error getting root dir path: %v", err)
+	}
+
 	var (
-		filePath   = filepath.Join("../../", pkg.DefaultFilePath)
-		outputPath = "../../lambda/gen.go"
+		filePath   = filepath.Join(rootPath, pkg.DefaultFilePath)
+		outputPath = filepath.Join(rootPath, "lambda/gen.go")
 	)
 
 	connStrs, err := pkg.ReadToConnStrs(filePath)
@@ -23,7 +29,8 @@ func main() {
 
 	joined := ""
 	for _, s := range connStrs {
-		joined += fmt.Sprintf("`%s`,\n", s)
+		safe := strings.ReplaceAll(s, "`", "` + \"`\" + `")
+		joined += fmt.Sprintf("`%s`,\n", safe)
 	}
 
 	goCode := fmt.Sprintf(
