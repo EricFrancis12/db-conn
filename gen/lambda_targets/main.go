@@ -51,5 +51,5 @@ func main() {
 		log.Fatalf("error writing to file %s: %v", outputPath, err)
 	}
 
-	fmt.Printf("Successfully generated '%s'", outputPath)
+	fmt.Printf("Successfully generated '%s'\n", outputPath)
 }

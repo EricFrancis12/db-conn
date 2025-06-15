@@ -39,7 +39,7 @@ func Run(c *Config) error {
 		go func(cs string) {
 			err := c.Connect(c.Ctx, c.DriverName, cs, c.ConnTimeout)
 			if err != nil {
-				errChan <- fmt.Errorf("error connecting to '%s': %v", connStr, err)
+				errChan <- fmt.Errorf("error connecting to '%s': %v", cs, err)
 			}
 			wg.Done()
 		}(connStr)
